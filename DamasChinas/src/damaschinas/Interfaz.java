@@ -4,18 +4,19 @@
  */
 package damaschinas;
 
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.net.URL;
 import java.util.ArrayList;
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
+import javax.swing.*;
 
 /**
  *
  * @author Victor
  */
 public class Interfaz extends javax.swing.JFrame {
+    public static final int PUERTO_SERVER=5000;
+    public static final int PUERTO_CLIENTE=6000;
     ArrayList <Casilla>mapa=new ArrayList();
     ArrayList <Casilla>yasaltados=new ArrayList();
     JLabel labels[][]=  new JLabel[18][14];
@@ -23,11 +24,16 @@ public class Interfaz extends javax.swing.JFrame {
     int turn=1;
     int max_piezas=10;
     boolean AlgoritmoMax=true;//Si se usa algoritmo, true=max; false=min;
+    int TipoPartida=1;//1=human vs human; 2=human vs pc; 3=pc vs pc;    
+    int NumeroJugador=1;//En partidas human vs human indica el número.
+    String IpCompañero="";
     Icon icon = new ImageIcon("Red-circle.png");
     Icon icon2 = new ImageIcon("Blue-circle.png");
     Icon icon3 = new ImageIcon("Gray-circle.png");
     Icon icon_l = new ImageIcon("Light-Red-circle.png");
     Icon icon2_l = new ImageIcon("Light-Blue-circle.png");    
+    
+    HiloServer Servidor;
     static public byte[][] board_shape2 ={{0,2},{0,2}};
     static public byte[][] board_shape =
 	{
@@ -160,6 +166,7 @@ public class Interfaz extends javax.swing.JFrame {
                 }            
             }
         }
+                
         
 
     }
@@ -386,8 +393,79 @@ public class Interfaz extends javax.swing.JFrame {
     }
     
     public void IniciarPartida(){
-        crearTablero();
-        calcularContiguos();
+        if(jRadioButton4.isSelected()){            
+            TipoPartida=1;
+                                                
+            Servidor=new HiloServer(true,this,PUERTO_SERVER);
+            Servidor.start();
+            setTitle("En espera de conexión...");
+        }
+        if(jRadioButton5.isSelected()){            
+            TipoPartida=2;
+        }
+        if(jRadioButton6.isSelected()){            
+            TipoPartida=3;
+        }        
+        
+        jButton2.setEnabled(false);
+        jButton9.setEnabled(false);
+                        
+//        crearTablero();
+//        calcularContiguos();
+    }
+    
+    public void UnirsePartida(){        
+        
+        IpCompañero="";
+        IpCompañero=JOptionPane.showInputDialog(this, "Ingrese la IP del servidor:", "Server IP", JOptionPane.INFORMATION_MESSAGE);
+        if(IpCompañero!=null && !IpCompañero.isEmpty()){
+            String MiIp=JOptionPane.showInputDialog(this, "Ingrese su ip:", "Client IP", JOptionPane.INFORMATION_MESSAGE);
+            if(MiIp!=null && !MiIp.isEmpty()){
+                Servidor=new HiloServer(true,this,PUERTO_CLIENTE); 
+                Servidor.start();
+                setTitle("Esperando respuesta del servidor...");
+                MandarObjetoSocket(IpCompañero,new String[]{"0",MiIp},PUERTO_SERVER);
+                
+            }
+        }
+    }
+    
+    /**
+     * Manda un objeto a través de socket.
+     * @param informacion Estructura de datos con la informacion de las carpetas compartidas.
+     */
+     public  void MandarObjetoSocket(String ip,Object informacion, int puerto) {
+        try{
+            Socket skCliente = new Socket(ip, puerto);
+
+            // Se env�a un mensaje de petici�n de fichero.
+            ObjectOutputStream oos = new ObjectOutputStream(skCliente
+                    .getOutputStream());            
+            oos.writeObject(informacion);            
+            System.out.println("SE MANDO LA INFORMACION");
+            skCliente.close();
+
+        } catch( Exception e ) {
+            JOptionPane.showMessageDialog( null,
+                "La conexión con el servidor no ha sido posible. Verifique su conectividad a la red \n"+
+                "y si las especificaciones de conexión son válidas.",
+                "Conexión Incompleta",
+                JOptionPane.ERROR_MESSAGE);
+        }
+
+    }
+     
+    public void EnviarChat(){
+        if(jTextField1.isEnabled() && !jTextField1.getText().isEmpty()){
+            int puerto=PUERTO_SERVER;
+            if(NumeroJugador==1)
+                puerto=PUERTO_CLIENTE;
+            
+            MandarObjetoSocket(IpCompañero,jTextField1.getText().trim(),puerto);
+            list1.add("Yo: "+jTextField1.getText().trim());
+            jTextField1.setText("");            
+            
+        }
     }
     
     /**
@@ -399,6 +477,7 @@ public class Interfaz extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        buttonGroup1 = new javax.swing.ButtonGroup();
         jPanel1 = new javax.swing.JPanel();
         jButton1 = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
@@ -414,6 +493,7 @@ public class Interfaz extends javax.swing.JFrame {
         jRadioButton6 = new javax.swing.JRadioButton();
         jComboBox4 = new javax.swing.JComboBox();
         jButton9 = new javax.swing.JButton();
+        jButton2 = new javax.swing.JButton();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         jMenu2 = new javax.swing.JMenu();
@@ -453,7 +533,7 @@ public class Interfaz extends javax.swing.JFrame {
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 639, Short.MAX_VALUE)
+            .addGap(0, 597, Short.MAX_VALUE)
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -464,6 +544,11 @@ public class Interfaz extends javax.swing.JFrame {
 
         jTextField1.setText("jTextField1");
         jTextField1.setEnabled(false);
+        jTextField1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextField1ActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
@@ -481,7 +566,7 @@ public class Interfaz extends javax.swing.JFrame {
             .addGroup(jPanel3Layout.createSequentialGroup()
                 .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(list1, javax.swing.GroupLayout.DEFAULT_SIZE, 307, Short.MAX_VALUE)
+                .addComponent(list1, javax.swing.GroupLayout.DEFAULT_SIZE, 274, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -498,6 +583,7 @@ public class Interfaz extends javax.swing.JFrame {
 
         jLabel4.setText("Tipo de Juego:");
 
+        buttonGroup1.add(jRadioButton4);
         jRadioButton4.setSelected(true);
         jRadioButton4.setText("Humano vs Humano");
         jRadioButton4.addActionListener(new java.awt.event.ActionListener() {
@@ -506,8 +592,10 @@ public class Interfaz extends javax.swing.JFrame {
             }
         });
 
+        buttonGroup1.add(jRadioButton5);
         jRadioButton5.setText("Humano vs PC");
 
+        buttonGroup1.add(jRadioButton6);
         jRadioButton6.setText("PC vs PC");
 
         jComboBox4.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Minimix - Max", "Minimix - Min" }));
@@ -517,10 +605,17 @@ public class Interfaz extends javax.swing.JFrame {
             }
         });
 
-        jButton9.setText("Iniciar");
+        jButton9.setText("Iniciar Partida");
         jButton9.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton9ActionPerformed(evt);
+            }
+        });
+
+        jButton2.setText("Conectarse a Partida");
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton2ActionPerformed(evt);
             }
         });
 
@@ -531,18 +626,22 @@ public class Interfaz extends javax.swing.JFrame {
             .addGroup(jPanel5Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jButton9, javax.swing.GroupLayout.DEFAULT_SIZE, 191, Short.MAX_VALUE)
-                    .addComponent(jRadioButton6)
+                    .addComponent(jButton9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel5Layout.createSequentialGroup()
-                        .addGap(21, 21, 21)
-                        .addComponent(jComboBox4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(jPanel5Layout.createSequentialGroup()
-                        .addComponent(jLabel3)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jComboBox3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jLabel4)
-                    .addComponent(jRadioButton4)
-                    .addComponent(jRadioButton5))
+                        .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jRadioButton6)
+                            .addGroup(jPanel5Layout.createSequentialGroup()
+                                .addGap(21, 21, 21)
+                                .addComponent(jComboBox4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(jPanel5Layout.createSequentialGroup()
+                                .addComponent(jLabel3)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(jComboBox3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jLabel4)
+                            .addComponent(jRadioButton4)
+                            .addComponent(jRadioButton5))
+                        .addGap(0, 42, Short.MAX_VALUE))
+                    .addComponent(jButton2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         jPanel5Layout.setVerticalGroup(
@@ -551,19 +650,21 @@ public class Interfaz extends javax.swing.JFrame {
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel3)
                     .addComponent(jComboBox3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel4)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jRadioButton4)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jRadioButton5)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGap(3, 3, 3)
                 .addComponent(jComboBox4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jRadioButton6)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGap(18, 18, 18)
                 .addComponent(jButton9)
-                .addContainerGap(18, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jButton2)
+                .addContainerGap(17, Short.MAX_VALUE))
         );
 
         jMenu1.setText("File");
@@ -583,9 +684,9 @@ public class Interfaz extends javax.swing.JFrame {
                 .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(jPanel5, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel3, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -660,7 +761,7 @@ public class Interfaz extends javax.swing.JFrame {
 
     private void jComboBox3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBox3ActionPerformed
         // TODO add your handling code here:
-        max_piezas=(jComboBox3.getSelectedIndex()+1)*3;
+        max_piezas=(jComboBox3.getSelectedIndex()+1)*10;
     }//GEN-LAST:event_jComboBox3ActionPerformed
 
     private void jRadioButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRadioButton4ActionPerformed
@@ -676,6 +777,16 @@ public class Interfaz extends javax.swing.JFrame {
         // TODO add your handling code here:
         IniciarPartida();
     }//GEN-LAST:event_jButton9ActionPerformed
+
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        // TODO add your handling code here:
+        UnirsePartida();
+    }//GEN-LAST:event_jButton2ActionPerformed
+
+    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
+        // TODO add your handling code here:
+        EnviarChat();
+    }//GEN-LAST:event_jTextField1ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -719,8 +830,10 @@ public class Interfaz extends javax.swing.JFrame {
         });
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton9;
+    public javax.swing.JButton jButton2;
+    public javax.swing.JButton jButton9;
     private javax.swing.JComboBox jComboBox3;
     private javax.swing.JComboBox jComboBox4;
     private javax.swing.JLabel jLabel3;
@@ -735,7 +848,7 @@ public class Interfaz extends javax.swing.JFrame {
     private javax.swing.JRadioButton jRadioButton4;
     private javax.swing.JRadioButton jRadioButton5;
     private javax.swing.JRadioButton jRadioButton6;
-    private javax.swing.JTextField jTextField1;
-    private java.awt.List list1;
+    public javax.swing.JTextField jTextField1;
+    public java.awt.List list1;
     // End of variables declaration//GEN-END:variables
 }

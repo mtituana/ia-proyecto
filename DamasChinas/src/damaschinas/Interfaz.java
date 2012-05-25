@@ -412,15 +412,18 @@ public class Interfaz extends javax.swing.JFrame {
             
             GuardarComo.setAcceptAllFileFilterUsed(false);
             GuardarComo.setFileHidingEnabled(false);
-            GuardarComo.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            GuardarComo.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
             GuardarComo.setDialogTitle("Guardar como...");
 
             TipoSeleccion=GuardarComo.showSaveDialog(null);
-
+            Date ahora=new Date();
+            String filename="/BITACORA_"+ahora.getHours()+"-"+ahora.getMinutes()+"-"+ahora.getSeconds()+".pdf";
+            
+            
             if(GuardarComo.getSelectedFile()!=null && TipoSeleccion!=JFileChooser.CANCEL_OPTION){                                                
                 Document documento = new Document();
                 try {
-                    PdfWriter.getInstance(documento, new FileOutputStream(GuardarComo.getSelectedFile().getPath()+".pdf"));
+                    PdfWriter.getInstance(documento, new FileOutputStream(GuardarComo.getSelectedFile().getPath()+filename));
                     documento.open();            
                     documento.addCreationDate();
 
@@ -435,7 +438,7 @@ public class Interfaz extends javax.swing.JFrame {
                 documento.close();
                 try {
                     Thread.sleep(1000);
-                    File path = new File(GuardarComo.getSelectedFile().getPath()+".pdf");          
+                    File path = new File(GuardarComo.getSelectedFile().getPath()+filename);          
                     path.setExecutable(true);
                     Desktop.getDesktop().open(path);
                 } catch (Exception ex) {

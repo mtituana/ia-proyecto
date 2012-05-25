@@ -4,10 +4,17 @@
  */
 package damaschinas;
 
-import java.io.ObjectOutputStream;
+import com.itextpdf.text.*;
+import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
+import java.awt.Desktop;
+import java.io.*;
 import java.net.Socket;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedList;
 import javax.swing.*;
 
 /**
@@ -19,9 +26,11 @@ public class Interfaz extends javax.swing.JFrame {
     public static final int PUERTO_CLIENTE=6000;
     ArrayList <Casilla>mapa=new ArrayList();
     ArrayList <Casilla>yasaltados=new ArrayList();
+    ArrayList <String> Movimientos=new ArrayList();
     JLabel labels[][]=  new JLabel[18][14];
     Casilla de=null;
     int turn=1;
+    int NumeroTurno=1;
     int max_piezas=10;
     boolean AlgoritmoMax=true;//Si se usa algoritmo, true=max; false=min;
     int TipoPartida=1;//1=human vs human; 2=human vs pc; 3=pc vs pc;    
@@ -33,6 +42,11 @@ public class Interfaz extends javax.swing.JFrame {
     Icon icon3 = new ImageIcon("Gray-circle.png");
     Icon icon_l = new ImageIcon("Light-Red-circle.png");
     Icon icon2_l = new ImageIcon("Light-Blue-circle.png");    
+    
+    private static Font catFont = new Font(Font.FontFamily.TIMES_ROMAN, 18,Font.BOLD);
+    private static Font redFont = new Font(Font.FontFamily.TIMES_ROMAN, 12,Font.NORMAL, BaseColor.RED);
+    private static Font subFont = new Font(Font.FontFamily.TIMES_ROMAN, 16,Font.BOLD);
+    private static Font smallBold = new Font(Font.FontFamily.TIMES_ROMAN, 12,Font.BOLD);
     
     HiloServer Servidor;
     static public byte[][] board_shape2 ={{0,2},{0,2}};
@@ -240,6 +254,12 @@ public class Interfaz extends javax.swing.JFrame {
 
                         }
                         
+                        Movimientos.add(NumeroTurno+"");
+                        Movimientos.add("Jugador "+turn); 
+                        Movimientos.add("Celda["+origen.idx+","+origen.idy+"] a Celda["+destino.idx+","+destino.idy+"]"); 
+                        NumeroTurno++;
+                        
+                        
                         int puerto=PUERTO_SERVER;
                         if(NumeroJugador==1){
                             puerto=PUERTO_CLIENTE;
@@ -384,7 +404,98 @@ public class Interfaz extends javax.swing.JFrame {
         }
         return posible;
     }
+        
+    private void EscribirPDF(ArrayList instrucciones){
+        
+            JFileChooser GuardarComo=new JFileChooser();
+            int TipoSeleccion;
+            
+            GuardarComo.setAcceptAllFileFilterUsed(false);
+            GuardarComo.setFileHidingEnabled(false);
+            GuardarComo.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            GuardarComo.setDialogTitle("Guardar como...");
+
+            TipoSeleccion=GuardarComo.showSaveDialog(null);
+
+            if(GuardarComo.getSelectedFile()!=null && TipoSeleccion!=JFileChooser.CANCEL_OPTION){                                                
+                Document documento = new Document();
+                try {
+                    PdfWriter.getInstance(documento, new FileOutputStream(GuardarComo.getSelectedFile().getPath()+".pdf"));
+                    documento.open();            
+                    documento.addCreationDate();
+
+                    CrearEncabezado(documento);
+                    AgregarTabla(documento,instrucciones);
+
+                } catch (DocumentException de) {
+                    JOptionPane.showMessageDialog(this, de.getMessage(), "Damas Chinas", JOptionPane.ERROR_MESSAGE);            
+                } catch (IOException ioe) {
+                    JOptionPane.showMessageDialog(this, ioe.getMessage(), "Damas Chinas", JOptionPane.ERROR_MESSAGE);
+                }
+                documento.close();
+                try {
+                    Thread.sleep(1000);
+                    File path = new File(GuardarComo.getSelectedFile().getPath()+".pdf");          
+                    path.setExecutable(true);
+                    Desktop.getDesktop().open(path);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        
+
+    }        
     
+    private void CrearEncabezado(Document document)
+        throws DocumentException {
+            Paragraph preface = new Paragraph();            
+            AgregarLinea(preface, 1);            
+            preface.add(new Paragraph("IA1 - Practica #3", catFont));
+            AgregarLinea(preface, 1);            
+            preface.add(new Paragraph(
+                    "Reporte generado por: " + System.getProperty("user.name") + ", " + new Date(),
+                    smallBold));
+            AgregarLinea(preface, 3);
+            preface.add(new Paragraph(
+                    "Documento generado para observar los movimientos de la partida. ",
+                    smallBold));                                    
+            AgregarLinea(preface,1);
+            document.add(preface);            
+    }
+    
+    private void AgregarTabla(Document subCatPart, ArrayList <String> iteraciones)
+    throws BadElementException {
+        PdfPTable table = new PdfPTable(3);
+        PdfPCell c1 = new PdfPCell(new Phrase("No. de Turno"));
+        c1.setHorizontalAlignment(Element.ALIGN_CENTER);
+        table.addCell(c1);
+
+        c1 = new PdfPCell(new Phrase("Jugador"));
+        c1.setHorizontalAlignment(Element.ALIGN_CENTER);
+        table.addCell(c1);
+        
+        c1 = new PdfPCell(new Phrase("Movimiento"));
+        c1.setHorizontalAlignment(Element.ALIGN_CENTER);
+        table.addCell(c1);
+        
+        table.setHeaderRows(1);
+                
+        for(int i=0;i<iteraciones.size();i++){
+            table.addCell(iteraciones.get(i));
+        }        
+        try {
+            subCatPart.add(table);
+        } catch (DocumentException ex) {
+            ex.printStackTrace();
+        }
+
+    }
+    
+    private void AgregarLinea(Paragraph paragraph, int number) {
+        for (int i = 0; i < number; i++) {
+                paragraph.add(new Paragraph(" "));
+        }
+    }
     
     public void calcularContiguos(){
         for(int i=0;i<mapa.size();i++){
@@ -559,7 +670,7 @@ public class Interfaz extends javax.swing.JFrame {
         jButton2 = new javax.swing.JButton();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
-        jMenu2 = new javax.swing.JMenu();
+        jMenuItem1 = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -730,11 +841,22 @@ public class Interfaz extends javax.swing.JFrame {
                 .addContainerGap(17, Short.MAX_VALUE))
         );
 
-        jMenu1.setText("File");
-        jMenuBar1.add(jMenu1);
+        jMenu1.setText("Generar");
+        jMenu1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMenu1ActionPerformed(evt);
+            }
+        });
 
-        jMenu2.setText("Edit");
-        jMenuBar1.add(jMenu2);
+        jMenuItem1.setText("PDF");
+        jMenuItem1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMenuItem1ActionPerformed(evt);
+            }
+        });
+        jMenu1.add(jMenuItem1);
+
+        jMenuBar1.add(jMenu1);
 
         setJMenuBar(jMenuBar1);
 
@@ -838,6 +960,16 @@ public class Interfaz extends javax.swing.JFrame {
         EnviarChat();
     }//GEN-LAST:event_jTextField1ActionPerformed
 
+    private void jMenu1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenu1ActionPerformed
+        // TODO add your handling code here:
+        
+    }//GEN-LAST:event_jMenu1ActionPerformed
+
+    private void jMenuItem1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem1ActionPerformed
+        // TODO add your handling code here:
+        EscribirPDF(Movimientos);
+    }//GEN-LAST:event_jMenuItem1ActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -889,8 +1021,8 @@ public class Interfaz extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JMenu jMenu1;
-    private javax.swing.JMenu jMenu2;
     private javax.swing.JMenuBar jMenuBar1;
+    private javax.swing.JMenuItem jMenuItem1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;

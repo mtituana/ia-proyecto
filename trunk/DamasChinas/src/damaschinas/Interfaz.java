@@ -26,6 +26,7 @@ public class Interfaz extends javax.swing.JFrame {
     boolean AlgoritmoMax=true;//Si se usa algoritmo, true=max; false=min;
     int TipoPartida=1;//1=human vs human; 2=human vs pc; 3=pc vs pc;    
     int NumeroJugador=1;//En partidas human vs human indica el número.
+    boolean P1_Enabled=true,P2_Enabled=true;//Indica si se puede o no hacer clic sobre las fichas
     String IpCompañero="";
     Icon icon = new ImageIcon("Red-circle.png");
     Icon icon2 = new ImageIcon("Blue-circle.png");
@@ -158,7 +159,7 @@ public class Interfaz extends javax.swing.JFrame {
                     
                     label.addMouseListener(new java.awt.event.MouseAdapter() {
                         public void mouseClicked(java.awt.event.MouseEvent evt) {
-                            mover(encontrarCasilla(cosox,cosoy));
+                            Mover(encontrarCasilla(cosox,cosoy));
                         }
                     });
                     mapa.add(temp);
@@ -183,8 +184,7 @@ public class Interfaz extends javax.swing.JFrame {
         icon2_l = loadIcon("Light-Blue-circle.png");   
         
         this.setExtendedState(JFrame.MAXIMIZED_BOTH);
-    }
-    
+    }       
 
     public Casilla encontrarCasilla(int x,int y){
         Casilla cas=null;
@@ -195,89 +195,123 @@ public class Interfaz extends javax.swing.JFrame {
         return cas;
     }
     
-    public void mover(Casilla obj){
-        if(de==null){           
-            if(obj.valor==(turn+1)){                            
-                de=obj;
-                if(turn==1){
-                    labels[de.idx][de.idy].setIcon(icon_l);
-                }
-                else{
-                    labels[de.idx][de.idy].setIcon(icon2_l);
-                }
-            } 
-        }
-        else{
-            if(movimientoPosible(de,obj)){
-                yasaltados.add(de);                
-                labels[de.idx][de.idy].setIcon(icon3);
-                encontrarCasilla(de.idx,de.idy).valor=1;
-                 if(turn==1){
-                   labels[obj.idx][obj.idy].setIcon(icon);
-                   encontrarCasilla(obj.idx,obj.idy).valor=2;
-                }
-                else{
-                    labels[obj.idx][obj.idy].setIcon(icon2);
-                    encontrarCasilla(obj.idx,obj.idy).valor=3;
-                }
-                 de=obj;
-                 if(!existenSaltos()){
-                    de=null;                 
-                    yasaltados.clear();
-                    if(turn==1)
-                        turn=2;
-                    else
-                        turn=1;
-                     
-                 }
-                 else{
-                     if(turn==1){
-                        labels[de.idx][de.idy].setIcon(icon_l);
+    /**
+     * 
+     * @param origen Casilla de origen
+     * @param destino Casilla de destino
+     * @param enviar True si se debe enviar por socket, False si no
+     */
+    public void Mover(Casilla origen, Casilla destino,boolean enviar){
+        if(origen!=null && destino !=null){
+            if(origen.valor==(turn+1) || !enviar){
+                //Verifica si la casilla puede ser seleccionada por un humano.
+                if((origen.valor==2 && P1_Enabled)||(origen.valor==3 && P2_Enabled)|| !enviar){
+                    if(turn==1){
+                        labels[origen.idx][origen.idy].setIcon(icon_l);                      
                     }
                     else{
-                        labels[de.idx][de.idy].setIcon(icon2_l);
+                        labels[origen.idx][origen.idy].setIcon(icon2_l);                    
                     }
-                     
-                 }
+                    if(movimientoPosible(origen,destino)){
+                        yasaltados.add(origen);                
+                        labels[origen.idx][origen.idy].setIcon(icon3);
+                        encontrarCasilla(origen.idx,origen.idy).valor=1;
+                        if(turn==1){
+                        labels[destino.idx][destino.idy].setIcon(icon);
+                        encontrarCasilla(destino.idx,destino.idy).valor=2;
+                        }
+                        else{
+                            labels[destino.idx][destino.idy].setIcon(icon2);
+                            encontrarCasilla(destino.idx,destino.idy).valor=3;
+                        }                    
+                        if(!existenSaltos(destino)){
+                            de=null;                 
+                            yasaltados.clear();
+                            TerminarTurno(false);
+
+                        }
+                        else{
+                            if(turn==1){
+                                labels[destino.idx][destino.idy].setIcon(icon_l);
+                            }
+                            else{
+                                labels[destino.idx][destino.idy].setIcon(icon2_l);
+                            }
+
+                        }
+                        
+                        int puerto=PUERTO_SERVER;
+                        if(NumeroJugador==1){
+                            puerto=PUERTO_CLIENTE;
+                        }
+                        
+                        if(enviar){
+                            MandarObjetoSocket(IpCompañero,new Object[]{0,origen.idx,origen.idy,
+                                destino.idx,destino.idy},puerto);
+                        }                        
+                    }
+                    else{
+                        System.err.println("Movimiento no permitido.");                
+                    } 
+                }                
             }
-            else{
-                System.out.println("nel vos");                
-            }
-            
         }
-        if(hasWon()!=0){
-            System.out.println("Gano el jugador "+hasWon());
+        
+        int aa=hasWon();
+        if(aa!=0){
+            JOptionPane.showMessageDialog(this, "Gano el jugador "+aa, "Fin del Juego", JOptionPane.INFORMATION_MESSAGE);
+            System.exit(0);
         }
     }
     
-    public boolean existenSaltos(){
+    public void Mover(Casilla obj){
+        if(de==null){           
+            if(obj.valor==(turn+1)){
+                //Verifica si la casilla puede ser seleccionada por un humano.
+                if((obj.valor==2 && P1_Enabled)||(obj.valor==3 && P2_Enabled)){
+                    de=obj;
+                    if(turn==1){
+                        labels[de.idx][de.idy].setIcon(icon_l);                      
+                    }
+                    else{
+                        labels[de.idx][de.idy].setIcon(icon2_l);                    
+                    }
+                }                                
+            } 
+        }
+        else{
+            Mover(de,obj,true);            
+        }        
+    }
+    
+    public boolean existenSaltos(Casilla d){
         boolean posible=false;
             
-            if(saltoPosible(de,encontrarCasilla(de.idx+2,de.idy-1))&&!yasaltados.contains(encontrarCasilla(de.idx+2,de.idy-1))){
+            if(saltoPosible(d,encontrarCasilla(d.idx+2,d.idy-1))&&!yasaltados.contains(encontrarCasilla(d.idx+2,d.idy-1))){
                 System.out.println("}:");
                 return true;
             }
-            if(saltoPosible(de,encontrarCasilla(de.idx+2,de.idy+1))&&!yasaltados.contains(encontrarCasilla(de.idx+2,de.idy+1)))
+            if(saltoPosible(d,encontrarCasilla(d.idx+2,d.idy+1))&&!yasaltados.contains(encontrarCasilla(d.idx+2,d.idy+1)))
                 {
                 System.out.println("dafuq");
                 return true;
             }
-            if(saltoPosible(de,encontrarCasilla(de.idx-2,de.idy-1))&&!yasaltados.contains(encontrarCasilla(de.idx-2,de.idy-1)))
+            if(saltoPosible(d,encontrarCasilla(d.idx-2,d.idy-1))&&!yasaltados.contains(encontrarCasilla(d.idx-2,d.idy-1)))
                 {
                 System.out.println("omg");
                 return true;
             }
-            if(saltoPosible(de,encontrarCasilla(de.idx-2,de.idy+1))&&!yasaltados.contains(encontrarCasilla(de.idx-2,de.idy-1)))
+            if(saltoPosible(d,encontrarCasilla(d.idx-2,d.idy+1))&&!yasaltados.contains(encontrarCasilla(d.idx-2,d.idy-1)))
                 {
                 System.out.println("so op");
                 return true;
             }
-            if(saltoPosible(de,encontrarCasilla(de.idx,de.idy-1))&&!yasaltados.contains(encontrarCasilla(de.idx,de.idy-1)))
+            if(saltoPosible(d,encontrarCasilla(d.idx,d.idy-1))&&!yasaltados.contains(encontrarCasilla(d.idx,d.idy-1)))
                 {
                 System.out.println("im literally crying");
                 return true;
             }
-            if(saltoPosible(de,encontrarCasilla(de.idx,de.idx+1))&&!yasaltados.contains(encontrarCasilla(de.idx,de.idx-1)))
+            if(saltoPosible(d,encontrarCasilla(d.idx,d.idx+1))&&!yasaltados.contains(encontrarCasilla(d.idx,d.idx-1)))
                 return true;
         
         return posible;
@@ -394,24 +428,21 @@ public class Interfaz extends javax.swing.JFrame {
     
     public void IniciarPartida(){
         if(jRadioButton4.isSelected()){            
-            TipoPartida=1;
-                                                
-            Servidor=new HiloServer(true,this,PUERTO_SERVER);
-            Servidor.start();
-            setTitle("En espera de conexión...");
+            TipoPartida=1;                                    
         }
-        if(jRadioButton5.isSelected()){            
-            TipoPartida=2;
+        if(jRadioButton5.isSelected()){                
+            TipoPartida=2;            
         }
         if(jRadioButton6.isSelected()){            
-            TipoPartida=3;
+            TipoPartida=3;            
         }        
         
+        Servidor=new HiloServer(true,this,PUERTO_SERVER);
+        Servidor.start();
+        setTitle("En espera de conexión...");
+                
         jButton2.setEnabled(false);
-        jButton9.setEnabled(false);
-                        
-//        crearTablero();
-//        calcularContiguos();
+        jButton9.setEnabled(false);                                
     }
     
     public void UnirsePartida(){        
@@ -445,7 +476,7 @@ public class Interfaz extends javax.swing.JFrame {
             System.out.println("SE MANDO LA INFORMACION");
             skCliente.close();
 
-        } catch( Exception e ) {
+        } catch( Exception e ) {            
             JOptionPane.showMessageDialog( null,
                 "La conexión con el servidor no ha sido posible. Verifique su conectividad a la red \n"+
                 "y si las especificaciones de conexión son válidas.",
@@ -466,6 +497,38 @@ public class Interfaz extends javax.swing.JFrame {
             jTextField1.setText("");            
             
         }
+    }
+    
+    /**
+     * 
+     * @param enviar True si se desea enviar por socket (En caso de presionar el botón TerminarTurno). False
+     * si termina el turno a causa de un movimiento.
+     */
+    public void TerminarTurno(boolean enviar){
+        if(turn==1){
+            turn=2;
+            jButton1.setEnabled(P2_Enabled);
+        }else{
+            turn=1;
+            jButton1.setEnabled(P1_Enabled);
+        }
+        if(de!=null){
+            if(turn==2){
+                labels[de.idx][de.idy].setIcon(icon);
+            }
+            else{
+                labels[de.idx][de.idy].setIcon(icon2);
+            }
+        }
+        de=null;                 
+        yasaltados.clear();
+        
+        if(enviar){
+            int puerto=PUERTO_SERVER;
+            if(NumeroJugador==1)
+                puerto=PUERTO_CLIENTE;
+            MandarObjetoSocket(IpCompañero,0,puerto);
+        }        
     }
     
     /**
@@ -743,20 +806,7 @@ public class Interfaz extends javax.swing.JFrame {
     
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         
-        if(turn==1)
-            turn=2;
-        else
-            turn=1;
-        if(de!=null){
-            if(turn==2){
-                labels[de.idx][de.idy].setIcon(icon);
-            }
-            else{
-                labels[de.idx][de.idy].setIcon(icon2);
-            }
-        }
-        de=null;                 
-        yasaltados.clear();
+        TerminarTurno(true);
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jComboBox3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBox3ActionPerformed
@@ -831,7 +881,7 @@ public class Interfaz extends javax.swing.JFrame {
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
-    private javax.swing.JButton jButton1;
+    public javax.swing.JButton jButton1;
     public javax.swing.JButton jButton2;
     public javax.swing.JButton jButton9;
     private javax.swing.JComboBox jComboBox3;

@@ -9,12 +9,14 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import java.awt.Desktop;
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.LinkedList;
 import javax.swing.*;
 
 /**
@@ -52,7 +54,7 @@ public class Interfaz extends javax.swing.JFrame {
     static public byte[][] board_shape2 ={{0,2},{0,2}};
     static public byte[][] board_shape =
 	{
-            { 0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0},
+             { 0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0},
                {0,  0,  0,  0,  0,  2,  2,  0,  0,  0,  0,  0,  0},
              {0,  0,  0,  0,  0,  2,  2,  2,  0,  0,  0,  0,  0},
                {0,  0,  0,  0,  2,  2,  2,  2,  0,  0,  0,  0,  0},
@@ -176,8 +178,8 @@ public class Interfaz extends javax.swing.JFrame {
                             Mover(encontrarCasilla(cosox,cosoy));
                         }
                     });
+                    label.setToolTipText("("+cosox+","+cosoy+")");
                     mapa.add(temp);
-                    
                 }            
             }
         }
@@ -231,8 +233,8 @@ public class Interfaz extends javax.swing.JFrame {
                         labels[origen.idx][origen.idy].setIcon(icon3);
                         encontrarCasilla(origen.idx,origen.idy).valor=1;
                         if(turn==1){
-                        labels[destino.idx][destino.idy].setIcon(icon);
-                        encontrarCasilla(destino.idx,destino.idy).valor=2;
+                            labels[destino.idx][destino.idy].setIcon(icon);
+                            encontrarCasilla(destino.idx,destino.idy).valor=2;
                         }
                         else{
                             labels[destino.idx][destino.idy].setIcon(icon2);
@@ -602,13 +604,25 @@ public class Interfaz extends javax.swing.JFrame {
      
     public void EnviarChat(){
         if(jTextField1.isEnabled() && !jTextField1.getText().isEmpty()){
+            String[] arreglo=jTextField1.getText().trim().split(" ");
+            
+            if(arreglo.length==2 && arreglo[0].trim().equalsIgnoreCase("mover")){                
+                String[] posiciones=arreglo[1].trim().split(",");
+                if(posiciones.length==4){                    
+                    Mover(encontrarCasilla(Integer.parseInt(posiciones[0].trim()),Integer.parseInt(posiciones[1].trim())),
+                        encontrarCasilla(Integer.parseInt(posiciones[2].trim()),Integer.parseInt(posiciones[3].trim())),
+                        true);
+                    jTextField1.setText("("+jTextField1.getText().trim()+")");
+                }                
+            }
             int puerto=PUERTO_SERVER;
             if(NumeroJugador==1)
                 puerto=PUERTO_CLIENTE;
-            
+
             MandarObjetoSocket(IpCompañero,jTextField1.getText().trim(),puerto);
             list1.add("Yo: "+jTextField1.getText().trim());
-            jTextField1.setText("");            
+            jTextField1.setText("");  
+                                  
             
         }
     }

@@ -16,7 +16,7 @@ public class Casilla {
     
     ArrayList <Casilla>contiguas=new ArrayList();
     int idx,idy;
-    int valor; //1 es vacía 2 es el jugador 1 y 3 es el jugador 2.
+    int valor; //1 es vacía; 2 es el jugador 1; 3 es el jugador 2.
     Interfaz padre;
     public Casilla(int x,int y,int v,Interfaz p){        
         idx=x;
